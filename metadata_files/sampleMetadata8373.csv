@@ -1,0 +1,160 @@
+sampleID,sampleSet,spongeID,preservationType,date,latitude,longitude,depth,samplingMethod,sampleNumber
+PMD1a,PMD1,Inflatella belli,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,1
+PMD1b,PMD1,Inflatella belli,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,1
+PMD1c,PMD1,Inflatella belli,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,1
+PMD1d,PMD1,Inflatella belli,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,1
+PMD1e,PMD1,Inflatella belli,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,1
+PMD2a,PMD2,Rossella nuda,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,2
+PMD2b,PMD2,Rossella nuda,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,2
+PMD2c,PMD2,Rossella nuda,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,2
+PMD2d,PMD2,Rossella nuda,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,2
+PMD2e,PMD2,Rossella nuda,dry,17/02/2008,-76.19305556,176.2961111,447,bottom fish trawl,2
+PMD3a,PMD3,Rossella villosa,dry,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,3
+PMD3b,PMD3,Rossella villosa,dry,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,3
+PMD3c,PMD3,Rossella villosa,dry,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,3
+PMD3d,PMD3,Rossella villosa,dry,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,3
+PMD3e,PMD3,Rossella villosa,dry,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,3
+PMD4a,PMD4,Cinachyra barbata,dry,08/02/1960,-74.055,179.35,267,dredge,4
+PMD4b,PMD4,Cinachyra barbata,dry,08/02/1960,-74.055,179.35,267,dredge,4
+PMD4c,PMD4,Cinachyra barbata,dry,08/02/1960,-74.055,179.35,267,dredge,4
+PMD4d,PMD4,Cinachyra barbata,dry,08/02/1960,-74.055,179.35,267,dredge,4
+PMD4e,PMD4,Cinachyra barbata,dry,08/02/1960,-74.055,179.35,267,dredge,4
+PMD5a,PMD5,Homaxinella,dry,24/02/2008,-72.0755,172.9043333,535,beam trawl,5
+PMD5b,PMD5,Homaxinella,dry,24/02/2008,-72.0755,172.9043333,535,beam trawl,5
+PMD5c,PMD5,Homaxinella,dry,24/02/2008,-72.0755,172.9043333,535,beam trawl,5
+PMD5d,PMD5,Homaxinella,dry,24/02/2008,-72.0755,172.9043333,535,beam trawl,5
+PMD5e,PMD5,Homaxinella,dry,24/02/2008,-72.0755,172.9043333,535,beam trawl,5
+PMD6a,PMD6,Rossella villosa,dry,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,6
+PMD6b,PMD6,Rossella villosa,dry,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,6
+PMD6c,PMD6,Rossella villosa,dry,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,6
+PMD6d,PMD6,Rossella villosa,dry,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,6
+PMD6e,PMD6,Rossella villosa,dry,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,6
+PMD7a,PMD7,Homaxinella,dry,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,7
+PMD7b,PMD7,Homaxinella,dry,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,7
+PMD7c,PMD7,Homaxinella,dry,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,7
+PMD7d,PMD7,Homaxinella,dry,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,7
+PMD7e,PMD7,Homaxinella,dry,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,7
+PMD8a,PMD8,Homaxinella,dry,21/02/2008,-72.3395,175.5322,945,bottom fish trawl,8
+PMD8b,PMD8,Homaxinella,dry,21/02/2008,-72.3395,175.5322,945,bottom fish trawl,8
+PMD8c,PMD8,Homaxinella,dry,21/02/2008,-72.3395,175.5322,945,bottom fish trawl,8
+PMD8d,PMD8,Homaxinella,dry,21/02/2008,-72.3395,175.5322,945,bottom fish trawl,8
+PMD8e,PMD8,Homaxinella,dry,21/02/2008,-72.3395,175.5322,945,bottom fish trawl,8
+PMD9a,PMD9,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,9
+PMD9b,PMD9,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,9
+PMD9c,PMD9,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,9
+PMD9d,PMD9,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,9
+PMD9e,PMD9,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,9
+PMD10a,PMD10,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,10
+PMD10b,PMD10,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,10
+PMD10c,PMD10,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,10
+PMD10d,PMD10,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,10
+PMD10e,PMD10,Homaxinella,dry,23/02/2008,-71.9385,173.3023,1431,bottom fish trawl,10
+PME1a,PME1,Rossella villosa,ethanol,13/02/2004,-72.32099915,170.475174,272,bottom fish trawl,1
+PME1b,PME1,Rossella villosa,ethanol,13/02/2004,-72.32099915,170.475174,272,bottom fish trawl,1
+PME1c,PME1,Rossella villosa,ethanol,13/02/2004,-72.32099915,170.475174,272,bottom fish trawl,1
+PME1d,PME1,Rossella villosa,ethanol,13/02/2004,-72.32099915,170.475174,272,bottom fish trawl,1
+PME1e,PME1,Rossella villosa,ethanol,13/02/2004,-72.32099915,170.475174,272,bottom fish trawl,1
+PME2a,PME2,Rossella nuda,ethanol,21/02/2008,-72.59033333,175.3423333,479,beam trawl,2
+PME2b,PME2,Rossella nuda,ethanol,21/02/2008,-72.59033333,175.3423333,479,beam trawl,2
+PME2c,PME2,Rossella nuda,ethanol,21/02/2008,-72.59033333,175.3423333,479,beam trawl,2
+PME2d,PME2,Rossella nuda,ethanol,21/02/2008,-72.59033333,175.3423333,479,beam trawl,2
+PME2e,PME2,Rossella nuda,ethanol,21/02/2008,-72.59033333,175.3423333,479,beam trawl,2
+PME3a,PME3,Cinachyra barbata,ethanol,16/02/2008,-76.833,179.95,664,bottom fish trawl,3
+PME3b,PME3,Cinachyra barbata,ethanol,16/02/2008,-76.833,179.95,664,bottom fish trawl,3
+PME3c,PME3,Cinachyra barbata,ethanol,16/02/2008,-76.833,179.95,664,bottom fish trawl,3
+PME3d,PME3,Cinachyra barbata,ethanol,16/02/2008,-76.833,179.95,664,bottom fish trawl,3
+PME3e,PME3,Cinachyra barbata,ethanol,16/02/2008,-76.833,179.95,664,bottom fish trawl,3
+PME4a,PME4,Homaxinella,ethanol,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,4
+PME4b,PME4,Homaxinella,ethanol,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,4
+PME4c,PME4,Homaxinella,ethanol,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,4
+PME4d,PME4,Homaxinella,ethanol,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,4
+PME4e,PME4,Homaxinella,ethanol,11/02/2008,-74.11116667,170.796,639,bottom fish trawl,4
+PME5a,PME5,Inflatella belli,ethanol,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,5
+PME5b,PME5,Inflatella belli,ethanol,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,5
+PME5c,PME5,Inflatella belli,ethanol,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,5
+PME5d,PME5,Inflatella belli,ethanol,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,5
+PME5e,PME5,Inflatella belli,ethanol,11/02/2008,-74.58166667,170.2498333,285,bottom fish trawl,5
+PME6a,PME6,Rossella villosa,ethanol,13/02/2004,-72.34183502,170.4429932,203,bottom fish trawl,6
+PME6b,PME6,Rossella villosa,ethanol,13/02/2004,-72.34183502,170.4429932,203,bottom fish trawl,6
+PME6c,PME6,Rossella villosa,ethanol,13/02/2004,-72.34183502,170.4429932,203,bottom fish trawl,6
+PME6d,PME6,Rossella villosa,ethanol,13/02/2004,-72.34183502,170.4429932,203,bottom fish trawl,6
+PME6e,PME6,Rossella villosa,ethanol,13/02/2004,-72.34183502,170.4429932,203,bottom fish trawl,6
+PME7a,PME7,Homaxinella,ethanol,09/02/2008,-73.1245,174.3205,321,bottom fish trawl,7
+PME7b,PME7,Homaxinella,ethanol,09/02/2008,-73.1245,174.3205,321,bottom fish trawl,7
+PME7c,PME7,Homaxinella,ethanol,09/02/2008,-73.1245,174.3205,321,bottom fish trawl,7
+PME7d,PME7,Homaxinella,ethanol,09/02/2008,-73.1245,174.3205,321,bottom fish trawl,7
+PME7e,PME7,Homaxinella,ethanol,09/02/2008,-73.1245,174.3205,321,bottom fish trawl,7
+PME8a,PME8,Homaxinella,ethanol,20/02/2008,-72.585,175.3083333,467,bottom fish trawl,8
+PME8b,PME8,Homaxinella,ethanol,20/02/2008,-72.585,175.3083333,467,bottom fish trawl,8
+PME8c,PME8,Homaxinella,ethanol,20/02/2008,-72.585,175.3083333,467,bottom fish trawl,8
+PME8d,PME8,Homaxinella,ethanol,20/02/2008,-72.585,175.3083333,467,bottom fish trawl,8
+PME8e,PME8,Homaxinella,ethanol,20/02/2008,-72.585,175.3083333,467,bottom fish trawl,8
+PME9a,PME9,Homaxinella,ethanol,19/02/2008,-71.59333333,172.1516667,1050,bottom longline,9
+PME9b,PME9,Homaxinella,ethanol,19/02/2008,-71.59333333,172.1516667,1050,bottom longline,9
+PME9c,PME9,Homaxinella,ethanol,19/02/2008,-71.59333333,172.1516667,1050,bottom longline,9
+PME9d,PME9,Homaxinella,ethanol,19/02/2008,-71.59333333,172.1516667,1050,bottom longline,9
+PME9e,PME9,Homaxinella,ethanol,19/02/2008,-71.59333333,172.1516667,1050,bottom longline,9
+PME10a,PME10,Homaxinella,ethanol,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,10
+PME10b,PME10,Homaxinella,ethanol,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,10
+PME10c,PME10,Homaxinella,ethanol,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,10
+PME10d,PME10,Homaxinella,ethanol,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,10
+PME10e,PME10,Homaxinella,ethanol,22/02/2008,-72.09266667,175.5716667,1567,bottom fish trawl,10
+PMF1a,PMF1,Rossella nuda,frozen,18/01/2009,-71.15,171,1120,bottom longline,1
+PMF1b,PMF1,Rossella nuda,frozen,18/01/2009,-71.15,171,1120,bottom longline,1
+PMF1c,PMF1,Rossella nuda,frozen,18/01/2009,-71.15,171,1120,bottom longline,1
+PMF1d,PMF1,Rossella nuda,frozen,18/01/2009,-71.15,171,1120,bottom longline,1
+PMF1e,PMF1,Rossella nuda,frozen,18/01/2009,-71.15,171,1120,bottom longline,1
+PMF2a,PMF2,Rossella villosa,frozen,13/01/2009,-71.5833,172.2167,1307,bottom longline,2
+PMF2b,PMF2,Rossella villosa,frozen,13/01/2009,-71.5833,172.2167,1307,bottom longline,2
+PMF2c,PMF2,Rossella villosa,frozen,13/01/2009,-71.5833,172.2167,1307,bottom longline,2
+PMF2d,PMF2,Rossella villosa,frozen,13/01/2009,-71.5833,172.2167,1307,bottom longline,2
+PMF2e,PMF2,Rossella villosa,frozen,13/01/2009,-71.5833,172.2167,1307,bottom longline,2
+PMF3a,PMF3,Homaxinella,frozen,26/12/2010,-75.0865,-176.6505,707,bottom longline,3
+PMF3b,PMF3,Homaxinella,frozen,26/12/2010,-75.0865,-176.6505,707,bottom longline,3
+PMF3c,PMF3,Homaxinella,frozen,26/12/2010,-75.0865,-176.6505,707,bottom longline,3
+PMF3d,PMF3,Homaxinella,frozen,26/12/2010,-75.0865,-176.6505,707,bottom longline,3
+PMF3e,PMF3,Homaxinella,frozen,26/12/2010,-75.0865,-176.6505,707,bottom longline,3
+PMF4a,PMF4,Inflatella belli,frozen,5/01/09,-72.43166667,176.4683333,1265,bottom longline,4
+PMF4b,PMF4,Inflatella belli,frozen,5/01/09,-72.43166667,176.4683333,1265,bottom longline,4
+PMF4c,PMF4,Inflatella belli,frozen,5/01/09,-72.43166667,176.4683333,1265,bottom longline,4
+PMF4d,PMF4,Inflatella belli,frozen,5/01/09,-72.43166667,176.4683333,1265,bottom longline,4
+PMF4e,PMF4,Inflatella belli,frozen,5/01/09,-72.43166667,176.4683333,1265,bottom longline,4
+PMF5a,PMF5,Cinachyra barbata,frozen,1/02/11,-73.87666667,-117.4416667,1162,bottom longline,5
+PMF5b,PMF5,Cinachyra barbata,frozen,1/02/11,-73.87666667,-117.4416667,1162,bottom longline,5
+PMF5c,PMF5,Cinachyra barbata,frozen,1/02/11,-73.87666667,-117.4416667,1162,bottom longline,5
+PMF5d,PMF5,Cinachyra barbata,frozen,1/02/11,-73.87666667,-117.4416667,1162,bottom longline,5
+PMF5e,PMF5,Cinachyra barbata,frozen,1/02/11,-73.87666667,-117.4416667,1162,bottom longline,5
+PMF6a,PMF6,Rossella villosa,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,6
+PMF6b,PMF6,Rossella villosa,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,6
+PMF6c,PMF6,Rossella villosa,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,6
+PMF6d,PMF6,Rossella villosa,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,6
+PMF6e,PMF6,Rossella villosa,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,6
+PMF7a,PMF7,Homaxinella,frozen,28/12/10,-74.8135,-177.0991667,642,bottom longline,7
+PMF7b,PMF7,Homaxinella,frozen,28/12/10,-74.8135,-177.0991667,642,bottom longline,7
+PMF7c,PMF7,Homaxinella,frozen,28/12/10,-74.8135,-177.0991667,642,bottom longline,7
+PMF7d,PMF7,Homaxinella,frozen,28/12/10,-74.8135,-177.0991667,642,bottom longline,7
+PMF7e,PMF7,Homaxinella,frozen,28/12/10,-74.8135,-177.0991667,642,bottom longline,7
+PMF8a,PMF8,Homaxinella,frozen,28/12/10,-74.86966667,-177.0505,813,bottom longline,8
+PMF8b,PMF8,Homaxinella,frozen,28/12/10,-74.86966667,-177.0505,813,bottom longline,8
+PMF8c,PMF8,Homaxinella,frozen,28/12/10,-74.86966667,-177.0505,813,bottom longline,8
+PMF8d,PMF8,Homaxinella,frozen,28/12/10,-74.86966667,-177.0505,813,bottom longline,8
+PMF8e,PMF8,Homaxinella,frozen,28/12/10,-74.86966667,-177.0505,813,bottom longline,8
+PMF9a,PMF9,Homaxinella,frozen,26/12/2010,-75.15333333,-176.301,760,bottom longline,9
+PMF9b,PMF9,Homaxinella,frozen,26/12/2010,-75.15333333,-176.301,760,bottom longline,9
+PMF9c,PMF9,Homaxinella,frozen,26/12/2010,-75.15333333,-176.301,760,bottom longline,9
+PMF9d,PMF9,Homaxinella,frozen,26/12/2010,-75.15333333,-176.301,760,bottom longline,9
+PMF9e,PMF9,Homaxinella,frozen,26/12/2010,-75.15333333,-176.301,760,bottom longline,9
+PMF10a,PMF10,Homaxinella,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,10
+PMF10b,PMF10,Homaxinella,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,10
+PMF10c,PMF10,Homaxinella,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,10
+PMF10d,PMF10,Homaxinella,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,10
+PMF10e,PMF10,Homaxinella,frozen,30/12/10,-74.63316667,-176.7965,1227,bottom longline,10
+PMNEGA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+PMNEGB,NA,NA,NA,NA,NA,NA,NA,NA,NA
+qPCRNEGA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+PMNEGC,NA,NA,NA,NA,NA,NA,NA,NA,NA
+qPCRNEG1,NA,NA,NA,NA,NA,NA,NA,NA,NA
+PMNEGE,NA,NA,NA,NA,NA,NA,NA,NA,NA
+qPCRNEG2,NA,NA,NA,NA,NA,NA,NA,NA,NA
+PMNEGG,NA,NA,NA,NA,NA,NA,NA,NA,NA
+qPCRNEG3,NA,NA,NA,NA,NA,NA,NA,NA,NA

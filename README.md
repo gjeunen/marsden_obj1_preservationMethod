@@ -20,3 +20,26 @@ In the Terminal, move to the starting folder. When listing the files, we should 
 cd move/to/starting/folder
 ls -ltr
 ```
+
+## 3. Bioinformatic analysis
+
+### 3.1 Initial data check
+
+Before starting the bioinformatic pipeline, we will check the structure and quality of the raw sequencing files using [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/). First, unzip the raw sequencing data files using `gunzip`.
+
+```{code-block} bash
+gunzip *.gz
+```
+
+Next, analyse quality and structure of raw sequencing data files using `fastqc`. Both libraries were sequenced on a MiSeq using the sequencing kit V2 1x300 bp.
+
+```{code-block} bash
+mkdir fastqc_raw
+fastqc *.fastq -t 8 -o fastqc_raw/
+```
+
+Samples were sequenced across two sequencing runs. To simplify the code, combine both files using the `cat` command.
+
+```{code-block} bash
+cat *.fastq > 8373Combined.fastq
+```
