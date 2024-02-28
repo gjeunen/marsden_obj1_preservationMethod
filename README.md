@@ -269,3 +269,199 @@ chmod +x idtaxaInitFormat.py
 ```{code-block} bash
 ./idtaxaInitFormat.py sintax.fasta idtaxa.fasta idtaxa.txt
 ```
+
+### 4.2 IDTAXA classifier training
+
+Once the reference database has been formatted to IDTAXA specifications, train the IDTAXA classifier on the training set, i.e., the formatted reference database. IDTAXA is incorporated in the R package [DECIPHER](http://www2.decipher.codes). Hence, the following code is run in R.
+
+```{code-block} R
+library(DECIPHER)
+setwd('/path/to/starting/folder/demux/qual_fasta/derep/')
+
+seqIDTAXA <- readDNAStringSet('idtaxa.fasta')
+rankIDTAXA <- read.table('idtaxa.txt', header = FALSE, col.names = c('Index', 'Name', 'Parent', 'Level', 'Rank'), sep = '*', quote = '', stringsAsFactors = FALSE)
+
+groups <- names(seqIDTAXA)
+head(groups)
+groups <- gsub("(.*)(Root;)", "\\2", groups)
+head(groups)
+groupCounts <- table(groups)
+uniqueGroups <- names(groupCounts)
+length(uniqueGroups)
+
+# count number of sequences per group and, optionally, select only a subset of sequences if the group is deemed too large (10 seqs)
+maxGroupSize <- 10 # max sequences per label (>= 1)
+remove <- logical(length(seqIDTAXA))
+for (i in which(groupCounts > maxGroupSize)) {
+  index <- which(groups==uniqueGroups[i])
+  keep <- sample(length(index),
+                 maxGroupSize)
+  remove[index[-keep]] <- TRUE
+}
+sum(remove) # number of sequences eliminated
+
+# train the classifier. Set 'maxIterations' to number of times the classifier will be trained.
+maxIterations <- 5 # must be >= 1
+allowGroupRemoval <- FALSE
+probSeqsPrev <- integer() # suspected problem sequences from prior iteration
+for (i in seq_len(maxIterations)) {
+  cat("Training iteration: ", i, "\n", sep="")
+  # train the classifier
+  trainingSet <- LearnTaxa(seqIDTAXA[!remove],
+                           names(seqIDTAXA)[!remove],
+                           rankIDTAXA)
+  # look for problem sequences
+  probSeqs <- trainingSet$problemSequences$Index
+  if (length(probSeqs)==0) {
+    cat("No problem sequences remaining.\n")
+    break
+  } else if (length(probSeqs)==length(probSeqsPrev) &&
+             all(probSeqsPrev==probSeqs)) {
+    cat("Iterations converged.\n")
+    break
+  }
+  if (i==maxIterations)
+    break
+  probSeqsPrev <- probSeqs
+  # remove any problem sequences
+  index <- which(!remove)[probSeqs]
+  remove[index] <- TRUE # remove all problem sequences
+  if (!allowGroupRemoval) {
+    # replace any removed groups
+    missing <- !(uniqueGroups %in% groups[!remove])
+    missing <- uniqueGroups[missing]
+    if (length(missing) > 0) {
+      index <- index[groups[index] %in% missing]
+      remove[index] <- FALSE # don't remove
+    }
+  }
+}
+sum(remove)
+length(probSeqs)
+trainingSet
+plot(trainingSet)
+```
+
+### 4.3 Assign taxonomic ID to ASV
+
+Once the classifier is trained, use the training set to assign a taxonomic ID to each ASV using the IDTAXA algorithm. Again, the code below should be run in an R environment.
+
+```{code-block} R
+library(DECIPHER)
+setwd('/path/to/starting/folder/demux/qual_fasta/derep/')
+
+# read in the ZOTU fasta file
+fastaIDTAXA <- readDNAStringSet('asv.fasta')
+
+# classify sequences
+set.seed(123)
+ids <- IdTaxa(fastaIDTAXA, trainingSet, type = 'extended', strand = 'top', threshold = 60, processors = NULL)
+ids
+
+# plot results
+plot(ids, trainingSet)
+
+# export output
+output <- sapply(ids,
+                 function(id) {
+                   paste(id$taxon,
+                         " (",
+                         round(id$confidence, digits = 1),
+                         "%)",
+                         sep = "",
+                         collapse = ": ")
+                 })
+# Create an empty character vector to store the output
+outputFile <- character(0)
+# Combine the zotu ID and information and add them to the output vector
+for (zotu_id in names(output)) {
+  entry <- paste(zotu_id, output[zotu_id], sep = "\t")  # Use tab as a separator
+  outputFile <- c(outputFile, entry)
+}
+# Write output to file
+writeLines(outputFile, 'taxonomyIDTAXA.txt')
+```
+
+### 4.4 Format taxonomic ID output file
+
+To easily read the IDTAXA results into R for downstream processing, parse the document using the following python script.
+
+```{code-block} bash
+nano idtaxaOutputFormat.py
+```
+
+```{code-block} python
+#! /usr/bin/env python3
+
+import sys
+import collections
+
+def removeBeforeSecondUppercase(input_string):
+    uppercase_count = 0
+    result = ''
+    count = 0
+    for char in input_string:
+        count += 1
+        if char.isupper():
+            uppercase_count += 1
+            if uppercase_count == 2:
+                result = input_string[count -1:]
+                break
+    return result
+
+idTaxaInputFile = sys.argv[1]
+idTaxaLineageOutputFile = sys.argv[2]
+idTaxaScoreOutputFile = sys.argv[3]
+
+headerRanks = ['root', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
+idLineageDict = collections.defaultdict(dict)
+idScoreDict = collections.defaultdict(dict)
+
+with open(idTaxaInputFile, 'r') as inputFile:
+  for line in inputFile:
+    line = line.rstrip('\n')
+    seqID = line.split('\t')[0]
+    lineage = line.split('\t')[1]
+    lineageItems = lineage.split(': ')
+    for item in range(len(headerRanks)):
+      try:
+        if 'unclassified' in lineageItems[item]:
+          idLineageDict[seqID][headerRanks[item]] = 'NA'
+          idScoreDict[seqID][headerRanks[item]] = 'NA'
+        else:
+          lineageString = lineageItems[item].split(' ')[0]
+          if lineageString != 'Root':
+            lineageString = removeBeforeSecondUppercase(lineageString)
+          scoreString = lineageItems[item].split('(')[1].rstrip(')')
+          idScoreDict[seqID][headerRanks[item]] = scoreString
+          idLineageDict[seqID][headerRanks[item]] = lineageString
+      except IndexError:
+        idLineageDict[seqID][headerRanks[item]] = 'NA'
+        idScoreDict[seqID][headerRanks[item]] = 'NA'
+
+with open(idTaxaLineageOutputFile, 'w') as outfile:
+  _ = outfile.write('ID' + '\t' + '\t'.join(headerRanks) + '\n')
+  for i in idLineageDict:
+    _ = outfile.write(i)
+    for j, g in idLineageDict[i].items():
+      _ = outfile.write('\t' + g)
+    _ = outfile.write('\n')
+
+with open(idTaxaScoreOutputFile, 'w') as outfile:
+  _ = outfile.write('ID' + '\t' + '\t'.join(headerRanks) + '\n')
+  for i in idScoreDict:
+    _ = outfile.write(i)
+    for j, g in idScoreDict[i].items():
+      _ = outfile.write('\t' + g)
+    _ = outfile.write('\n')
+```
+
+Press `ctrl + x` to exit out of the editor, followed by `y` and `return`.
+
+```{code-block} bash
+chmod +x idtaxaOutputFormat.py
+```
+
+```{code-block} bash
+./idtaxaOutputFormat.py taxonomyIDTAXA.txt idtaxaLineage.txt idtaxaScore.txt
+```
