@@ -12,7 +12,7 @@ The bioinformatic and statistical analysis requires access to several files, inc
 
 The two raw g-zipped sequencing files can be downloaded from the Sequence Read Archive (SRA) project number PRJNA1019816 and submission number SUB13856226. The files names are: "**8373-P1-00-01_S1_L001_R1_001.fastq.gz**" and "**8373-P2-00-01_S1_L001_R1_001.fastq.gz**". Download both sequencing data files and place them in the starting folder.
 
-Besides the sequencing data, two metadatafiles are necessary to conduct the bioinformatic and statistical analysis, both of which can be downloaded from this GitHub repository in the folder "**metadata_files**". The first metadata file named "**barcodeMetadata8373.fasta**" will be used for demultiplexing, while the second metadata file named "**sampleMetadata8373.csv**" will be used for the statistical analysis. Place both metadata files into the starting folder.
+Besides the sequencing data, three metadatafiles are necessary to conduct the bioinformatic and statistical analysis, both of which can be downloaded from this GitHub repository in the folder "**metadata_files**". The first metadata file named "**barcodeMetadata8373.fasta**" will be used for demultiplexing, while the second metadata file named "**sampleMetadata8373.csv**" will be used for the statistical analysis. Place both metadata files into the starting folder. The third metadata file named "**Porifera_NIWA_22Sept2023.xlsx**" contains the information of the NIWA Invertebrate Collection for Figure 1.
 
 In the Terminal, move to the starting folder. When listing the files, all starting files should be listed in the Terminal window.
 
@@ -727,4 +727,123 @@ write.table(freqTable.sampleThreshold, 'zotutableFiltered.txt', append = FALSE, 
 write.table(metaData.sampleThreshold, '../../../sampleMetadata8373Filtered.txt', append = FALSE, sep = '\t', dec = '.', row.names = FALSE)
 write.table(taxonomyTable.sampleThreshold, 'taxonomyFiltered.txt', append = FALSE, sep = '\t', dec = '.', row.names = TRUE, col.names = NA)
 writeXStringSet(sequenceTable.sampleThreshold, file = 'asvFiltered.fasta')
+```
+
+## 6. Statistical analysis
+
+All code for the statistical analysis is run in an R environment.
+
+### 6.1 Reading data into R
+
+To complete the statistical analysis, 6 files need to be read into R, all of which were created during the bioinformatic processing or are made available on this GitHub repository. The 6 files include: (1) the filtered count table "**zotutableFiltered.txt**", (2) the updated sample metadata file "**sampleMetadata8373Filtered.txt**", (3) the filtered ASV sequence file "**asvFiltered.fasta**", (4) the phylogenetic tree "**asvFiltered-tree.tree**", (5) the updated taxonomy table "**taxonomyFiltered.txt**", and (6) the NIWA Invertebrate Collection database "**Porifera_NIWA_22Sept2023.xlsx**".
+
+```{code-block} R
+#########################
+# PREPARE R ENVIRONMENT #
+#########################
+library(Biostrings)
+library(phyloseq)
+library(ggplot2)
+library(vegan)
+library(iNEXT)
+library(microbiome)
+library(ape)
+library(scales)
+library(readxl)
+library(tidyverse)
+library(ampvis2)
+library(car)
+library(FSA)
+library(dplyr)
+library(agricolae)
+library(speedyseq)
+library(BiodiversityR)
+library(indicspecies)
+
+# set working directory
+setwd('/path/to/starting/folder/demux/qual_fasta/derep/')
+
+##################
+# READ DATA IN R #
+##################
+metaData <- read.table('../../../sampleMetadata8373Filtered.txt', header = TRUE, sep = '\t', row.names = 1, check.names = FALSE, comment.char = '')
+freqTable <- read.table('zotutableFiltered.txt', header = TRUE, sep = '\t', row.names = 1, check.names = FALSE, comment.char = '')
+taxonomyTable <- read.table('taxonomyFiltered.txt', header = TRUE, sep = '\t', row.names = 1, check.names = FALSE, comment.char = '')
+sequenceTable <- readDNAStringSet('asvFiltered.fasta')
+phyloTree <- read.tree('asvFiltered-tree.tree')
+metadata <- read_xlsx('../../../Porifera_NIWA_22Sept2023.xlsx', sheet = 'Porifera', col_names = TRUE, na = '')
+```
+
+### 6.2 Figure 1
+
+```{code-block} R
+#######################################
+# FIGURE 1: PRESERVATION OF SPECIMENS #
+#######################################
+# remove entries that do not have year information
+metadata_year <- metadata[!is.na(metadata$`Date (Year)`), ]
+
+# determine groups of preservation types
+unique(metadata_year[c("Pres Type")])
+
+# change all preservation type not in list to other
+shouldBecomeOther <- !(metadata_year$`Pres Type` %in% c('Frozen', 'Formalin', 'Ethanol - no formalin', 'Dry', 'Isopropanol - orig unknown', 'Ethanol - orig formalin', 'Ethanol - orig Isopropanol'))
+metadata_year$`Pres Type`[shouldBecomeOther] <- 'other'
+
+# change 'Isopropanol - orig unknown' and 'Ethanol - orig Isopropanol' to Isopropanol
+shouldBecomeIsopropanol <- (metadata_year$`Pres Type` %in% c('Isopropanol - orig unknown', 'Ethanol - orig Isopropanol'))
+metadata_year$`Pres Type`[shouldBecomeIsopropanol] <- 'Isopropanol'
+
+# change 'Ethanol - orig formalin' to Formalin
+shouldBecomeFormalin <- (metadata_year$`Pres Type` %in% c('Ethanol - orig formalin'))
+metadata_year$`Pres Type`[shouldBecomeFormalin] <- 'Formalin'
+
+# change 'Ethanol - no formalin' to Ethanol
+shouldBecomeEthanol <- (metadata_year$`Pres Type` %in% c('Ethanol - no formalin'))
+metadata_year$`Pres Type`[shouldBecomeEthanol] <- 'Ethanol'
+
+# see if data is formatted appropriately
+unique(metadata_year[c("Pres Type")])
+
+# only keep the necessary columns
+metadata_year_subset <- subset(metadata_year, select = c('Pres Type', 'Date (Year)'))
+
+# find minimum and maximum year to group samples
+max(metadata_year_subset$`Date (Year)`)
+min(metadata_year_subset$`Date (Year)`)
+
+# Create 10-year bins
+metadata_year_subset <- metadata_year_subset %>%
+  mutate(`Year Bin` = cut(`Date (Year)`, breaks = seq(1910, 2030, by = 10), right = FALSE))
+
+# Create all possible combinations of 'Year Bin' and 'Pres Type'
+all_combinations <- expand.grid(
+  `Year Bin` = unique(metadata_year_subset$`Year Bin`),
+  `Pres Type` = unique(metadata_year_subset$`Pres Type`)
+)
+
+# Calculate the number of items in each 10-year bin for each 'Pres Type'
+bin_counts <- metadata_year_subset %>%
+  group_by(`Year Bin`, `Pres Type`) %>%
+  summarize(count = n(), .groups = "drop")
+
+# Merge with all combinations to fill in missing counts with zeros
+bin_counts <- merge(all_combinations, bin_counts, by = c("Year Bin", "Pres Type"), all.x = TRUE)
+bin_counts[is.na(bin_counts$count), "count"] <- 0
+
+# set order of plots
+facet_order <- c("Dry", "Ethanol", "Frozen", "Formalin", "Isopropanol", "other")
+
+# Create separate bar plots for each 'Pres Type'
+ggplot(bin_counts, aes(x = `Year Bin`, y = count, fill = `Pres Type`)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = count), vjust = -0.5, size = 3) +
+  labs(title = "Number of Items in 10-Year Bins by Press Type",
+       x = "Year Bin",
+       y = "Number of Items") +
+  #theme_classic() +
+  theme_grey() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  scale_y_sqrt(expand = c(0, 0), limits = c(0, 6000)) +
+  facet_wrap(~ factor(`Pres Type`, levels = facet_order), scales = "free_x")
 ```
