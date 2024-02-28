@@ -195,4 +195,77 @@ Eigth, export the database to SINTAX format, as CRABS currently doesn't support 
 crabs tax_format -i cleandb.tsv -o sintax.fasta -f sintax
 ```
 
-Once the database is exported to SINTAX format, use the python script below to reformat the local reference database to IDTAXA specifications.
+Once the database is exported to SINTAX format, use the python script below to reformat the local reference database to IDTAXA specifications. Note that IDTAXA cannot resolve homonyms, i.e., identical taxon names. In the resulting database "**sintax.fasta**", both a gastropod and fish family are named "Chilodontidae". To ensure IDTAXA runs without errors, the python code below uses names of two ranks pasted together to generate a unique name for each taxon. For example, the fish family name of Chilodontidae will be transformed to the order name + the family name: CharaciformesChilodontidae. This output of this "hack" will be corrected at a later stage to revert taxon names back to their appropriate format.
+
+```{code-block} bash
+nano idtaxaInitFormat.py
+```
+
+```{code-block} python
+#! /usr/bin/env python3
+
+import sys
+
+inFile = sys.argv[1]
+dbOut = sys.argv[2]
+taxOut = sys.argv[3]
+
+indexNameDict = {'Root' : 0}
+parentDict = {'Root' : -1}
+levelDict = {'Root' : 0}
+rankDict = {'Root' : 'rootrank'}
+indexNumber = 0
+ranks = {0: 'rootrank', 1 : 'domain', 2 : 'phylum', 3 : 'class', 4 : 'order', 5: 'family', 6 : 'genus', 7 : 'species'}
+
+idTaxaSeqDict = {}
+
+with open(inFile, 'r') as infile:
+    for line in infile:
+        previousName = 'Root'
+        previousTaxonName = 'Root'
+        oldName = 'start'
+        levelTax = 0
+        if line.startswith('>'):
+            line = line.rstrip('\n')
+            seqID = line.split(';')[0]
+            headerStart = f'{seqID};Root'
+            lineage = line.split(':')[1:8]
+            for taxon in lineage:
+                levelTax += 1
+                taxonName = taxon.split(',')[0]
+                if taxonName == '':
+                    taxonName = f'{previousName}_insertaeCedis'
+                uniqueTaxonName = f'{previousTaxonName}{taxonName}'
+                headerStart = f'{headerStart};{uniqueTaxonName}'
+                if uniqueTaxonName not in indexNameDict:
+                    indexNumber += 1
+                    indexNameDict[uniqueTaxonName] = indexNumber
+                    parentDict[uniqueTaxonName] = indexNameDict[previousName]
+                    levelDict[uniqueTaxonName] = levelTax
+                    rankDict[uniqueTaxonName] = ranks[levelTax]
+                taxonNumber = indexNameDict[uniqueTaxonName]
+                oldName = previousName
+                previousName = uniqueTaxonName
+                previousTaxonName = taxonName
+        else:
+            idTaxaSeqDict[headerStart] = line.rstrip('\n')                
+
+with open(taxOut, 'w') as outfile:
+    for indexName in indexNameDict:
+        printLine = f'{indexNameDict[indexName]}*{indexName}*{parentDict[indexName]}*{levelDict[indexName]}*{rankDict[indexName]}\n'
+        _ = outfile.write(printLine)
+
+with open(dbOut, 'w') as seqFile:
+    for key in idTaxaSeqDict:
+        _ = seqFile.write(f'{key}\n{idTaxaSeqDict[key]}\n')
+```
+
+Press `ctrl + x` to exit out of the editor, followed by `y` and `return`.
+
+```{code-block} bash
+chmod +x idtaxaInitFormat.py
+```
+
+```{code-block} bash
+./idtaxaInitFormat.py sintax.fasta idtaxa.fasta idtaxa.txt
+```
