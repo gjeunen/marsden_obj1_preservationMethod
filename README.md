@@ -759,6 +759,11 @@ library(agricolae)
 library(speedyseq)
 library(BiodiversityR)
 library(indicspecies)
+library(ggtree)
+library(microViz)
+library(ggpubr)
+library(aplot)
+library(ggtreeExtra)
 
 # set working directory
 setwd('/path/to/starting/folder/demux/qual_fasta/derep/')
@@ -772,6 +777,13 @@ taxonomyTable <- read.table('taxonomyFiltered.txt', header = TRUE, sep = '\t', r
 sequenceTable <- readDNAStringSet('asvFiltered.fasta')
 phyloTree <- read.tree('asvFiltered-tree.tree')
 metadata <- read_xlsx('../../../Porifera_NIWA_22Sept2023.xlsx', sheet = 'Porifera', col_names = TRUE, na = '')
+
+# 1. import dataframes into phyloseq
+OTU = otu_table(freqTable, taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(taxonomyTable))
+META = sample_data(metaData)
+physeq = merge_phyloseq(OTU, TAX, META, phyloTree, sequenceTable)
+physeq
 ```
 
 ### 6.2 Figure 1
@@ -910,4 +922,142 @@ dev.off()
 Figure 3 of the manuscript displays a bayesian phylogenetic tree generated of all 64 ZOTU sequences. Bayesian tree generated in Beast2. Tip labels represent ZOTU number. Taxonomic ID for each ZOTU can be retrieved from SUPPLEMENT 4. Inner bar graph showing the number of detections of each ZOTU sequence within the nine specimens stored dry (yellow), in ethanol (blue), and frozen (red). Outer bar graph showing the relative read abundance of each ZOTU sequence within the nine specimens stored dry (yellow), in ethanol (blue), and frozen (red). Axis for relative read abundance bar graph is reported as square root transformed to increase readability of low-abundant signals. Most frequently and abundant taxonomic groups are represented by silhouettes, including (a) Chondrichthyes, (b) Gadiformes, (c) Bathylagidae, (d) Nototheniidae, (e) Bathydraconidae, and (f) Channichthyidae.
 
 ```{code-block} R
+# create detection frequency dataframe for plotting
+sample_colors <- c("dry" = "#f4dc92", "ethanol" = "#90adbf", "frozen" = "#ce7c7d")
+physeq.pa <- microbiome::transform(physeq, 'pa')
+physeq.freqoccur <- merge_samples2(physeq.pa, 'sampleSet')
+physeq.pa2 <- microbiome::transform(physeq.freqoccur, 'pa')
+physeq.preserve <- merge_samples2(physeq.pa2, 'preservationType')
+point.data <- physeq.preserve %>% psmelt() %>% as_tibble() # %>% filter(Abundance > 0)
+
+# create relative read abundance dataframe for plotting
+sample_colors <- c("dry" = "#f4dc92", "ethanol" = "#90adbf", "frozen" = "#ce7c7d")
+physeq.abund.preserve <- merge_samples2(physeq, 'preservationType')
+physeq.relabund.preserve <- microbiome::transform(physeq.abund.preserve, 'compositional')
+rel.abund.data <- physeq.relabund.preserve %>% psmelt() %>% as_tibble()
+
+# plot phylogenetic tree
+ptree <-ggtree(phyloTree, layout = "fan", open.angle = 20, size = 0.05, color = 'grey10') +
+  theme_tree2()
+ptree
+ptree2 <- ptree +
+  geom_tiplab(size = 2, align = TRUE, ladderize = FALSE, offset = 0.35, linetype = 'blank') +
+  geom_fruit(data = point.data, 
+             geom = geom_bar, 
+             pwidth = 0.4,
+             mapping = aes(x = Abundance, y = OTU, fill = preservationType),
+             orientation = 'y',
+             stat = 'identity',
+             position = position_dodgex(),
+             axis.params = list(
+               axis = 'x',
+               text.size = 2,
+               nbreak = 4
+             ),
+             grid.params = list()) +
+  geom_fruit(data = rel.abund.data,
+            geom = geom_bar,
+            pwidth = 0.4,
+            offset = 0.1,
+            mapping = aes(x = Abundance, y = OTU, fill = preservationType),
+            orientation = 'y',
+            stat = 'identity',
+            position = position_dodgex(),
+            axis.params = list(
+              axis = 'x',
+              text.size = 2
+            ),
+            grid.params = list(),
+            aes(x = Abundance),
+            scale_x_sqrt()) +
+  scale_fill_manual(values = sample_colors) 
+ptree2 
+```
+
+### 6.5 Summary stats
+
+Summary statistics of the final count table, including total number of reads, as well as the most abundant and most frequently detected taxa. Plotting of read distribution of sequences and samples, using a normal y-axis and log-transformed y-axis.
+
+```{code-block} R
+# 1. list 10 most abundant (read count) taxa
+for (x in top_taxa(physeq, n = 10)) {
+  taxa <- tax_table(physeq)[x, ]
+  count <- sum(otu_table(physeq)[x, ])
+  print(taxa)
+  print(count)
+  print(count/sum(otu_table(physeq))*100)
+}
+
+# 1. list 10 most frequently detected (occurrences) taxa
+for (x in top_taxa(microbiome::transform(physeq, 'pa'), n = 10)) {
+  taxa <- tax_table(physeq)[x, ]
+  count <- sum(otu_table(microbiome::transform(physeq, 'pa'))[x, ])
+  print(taxa)
+  print(count)
+  print(count/134*100)
+}
+
+# 1. plot read distribution
+readsumsdf = data.frame(nreads = sort(taxa_sums(physeq), TRUE), sorted = 1:ntaxa(physeq), 
+                        type = "ZOTUs")
+readsumsdf = rbind(readsumsdf, data.frame(nreads = sort(sample_sums(physeq), 
+                                                        TRUE), sorted = 1:nsamples(physeq), type = "Samples"))
+title = "Total number of reads"
+p = ggplot(readsumsdf, aes(x = sorted, y = nreads)) + geom_bar(stat = "identity")
+p + ggtitle(title) + facet_wrap(~type, 1, scales = "free")
+p + ggtitle(title) + scale_y_log10() + facet_wrap(~type, 1, scales = "free")
+```
+
+### 6.6 Supplement 6
+
+Prior to plotting the rarefaction curves, determine if there is a significant correlation between sequencing depth and number of detected taxa using a Pearson correlation test.
+
+```{code-block} R
+# 1. determine correlation between sequencing depth and number of detected taxa
+x <- as.vector(sample_sums(physeq))
+y <- as.vector(sample_sums(microbiome::transform(physeq, 'pa')))
+plot(x, y, xlab = 'sequencing depth', ylab = 'sequence richness',
+     main = 'sequence depth - richnes correlation', pch = 20, col = alpha('black', 0.4), cex = 3)
+abline(lm(y ~ x), col = 'red')
+cor(x, y)^2
+cor.test( ~x + y, method = "pearson", conf.level = 0.95)
+```
+
+To determine if sufficient sequencing depth was achieved within our experiment, draw rarefaction curves on the unfiltered count table. The ampvis2 R package enables easy facetting of the rarefaction curves to simplify the interpretation of the results.
+
+```{code-block} R
+########################
+## RAREFACTION CURVES ##
+########################
+# read in the unfiltered data frames
+freqTable.unfiltered <- read.table('zotutabUsearch8373Combined.txt', header = TRUE, sep = '\t', row.names = 1, check.names = FALSE, comment.char = '')
+metaData.unfiltered <- read_excel('../0-metadata/sampleMetadata8373.xlsx', sheet = 'Sheet1')
+taxonomyTable.unfiltered <- read.table('idtaxaLineage8373Combined.txt', header = TRUE, sep = '\t', row.names = 1, check.names = FALSE, comment.char = '')
+
+# remove negative control samples, as they are not matching between data frames
+negSamples <- grep('NEG', metaData.unfiltered$sampleID, value = TRUE)
+freqTable.unfiltered <- freqTable.unfiltered[, !names(freqTable.unfiltered) %in% negSamples]
+metaData.unfiltered <- metaData.unfiltered[!metaData.unfiltered$sampleID %in% negSamples, ]
+
+# set sampleID column to rownames to match sample names across data frames
+metaData.unfiltered <- column_to_rownames(metaData.unfiltered, var = 'sampleID')
+
+# import files into phyloseq
+OTU.unfiltered = otu_table(freqTable.unfiltered, taxa_are_rows = TRUE)
+TAX.unfiltered = phyloseq::tax_table(as.matrix(taxonomyTable.unfiltered))
+META.unfiltered = sample_data(metaData.unfiltered)
+physeq.unfiltered = merge_phyloseq(OTU.unfiltered, TAX.unfiltered, META.unfiltered)
+
+# run basic rarecurve function
+rarecurve(as(t(otu_table(physeq.unfiltered)), 'matrix'), step = 100, xlab = "Sample Size", ylab = "Taxa")
+
+# split rarefaction curves by group using the ampvis2 package
+metadata.ampvis <- data.frame(sample_data(physeq.unfiltered), check.names = FALSE)
+metadata.ampvis <- rownames_to_column(metadata.ampvis, var = "rowname")
+asvTable.ampvis <- data.frame(otu_table(physeq.unfiltered), check.names = FALSE)
+asvTable.ampvis$Species <- NA
+ps3 <- amp_load(asvTable.ampvis, metadata.ampvis)
+rarPlot <- amp_rarecurve(ps3, stepsize = 100, facet_by = 'sampleSet', color_by = 'preservationType') +
+  ylab('Number of observed ZOTUs')
+rarPlot
 ```
