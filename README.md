@@ -465,3 +465,266 @@ chmod +x idtaxaOutputFormat.py
 ```{code-block} bash
 ./idtaxaOutputFormat.py taxonomyIDTAXA.txt idtaxaLineage.txt idtaxaScore.txt
 ```
+
+## 5. Data pre-processing
+
+Prior to the statistical analysis, data tables will be filtered and parsed according to various specifications. All code within this section should be run within an R environment.
+
+### 5.1 Read data into R
+
+First, all data files need to be read into R, including the sample metadata file "**sampleMetadata8373.csv**", the count table "**zotutable.txt**", the taxonomy table "**idtaxaLineage.txt**", and the ASV sequence file "**asv.fasta**".
+
+```{code-block} R
+#########################
+# PREPARE R ENVIRONMENT #
+#########################
+library(readxl)
+library(Biostrings)
+library(dplyr)
+
+# set working directory
+setwd('/path/to/starting/folder/demux/qual_fasta/derep/')
+
+##################
+# READ DATA IN R #
+##################
+metaData <- read_csv('../../../sampleMetadata8373.csv')
+freqTable <- read.table('zotutable.txt', header = TRUE, sep = '\t', row.names = 1, check.names = FALSE, comment.char = '')
+taxonomyTable <- read.table('idtaxaLineage.txt', header = TRUE, sep = '\t', row.names = 1, check.names = FALSE, comment.char = '')
+sequenceTable <- readDNAStringSet('asv.fasta')
+```
+
+### 5.2 Negative controls
+
+To filter the data based on our negative controls, (1) sum all negative samples to column `freqTable$NEGSUM`, (2) identify which ASVs had a positive detection in our negative controls, (3) compare the abundance of these ASVs to samples, (4) remove all detections made up of 3 reads or less across the full count table, (5) set an abundance threshold of 10x the number of reads in the negative controls for ZOTUs with a positive detection in the negative controls. For example, ZOTU2 shows 3 reads in `freqTable$NEGSUM`. Hence, remove all detections of ZOTU2 in samples when read count is lower than 30.
+
+```{code-block} R
+#####################
+# NEGATIVE CONTROLS #
+#####################
+
+# 1. find columns that contain NEG in header, 2. sum rows that contain NEG in header to column NEGSUM, 3. drop individual NEG columns
+negColumns <- grep('NEG', names(freqTable), value = TRUE)
+freqTable$NEGSUM <- rowSums(freqTable[negColumns])
+freqTable <- freqTable[, !names(freqTable) %in% negColumns]
+
+# 1. create list of index names (ZOTU numbers) for which freqTable$NEGSUM > 0, 2. print taxonomy of ZOTUs in list
+negZOTUs <- rownames(freqTable)[which(freqTable$NEGSUM > 0)]
+print(taxonomyTable[negZOTUs, ])
+
+# 1. iterate over index names in negZOTUs list and print out the necessary values
+for (x in negZOTUs) {
+  if (x %in% rownames(freqTable)) {
+    negValue <- freqTable[x, 'NEGSUM']
+    negValuePerc <- negValue / rowSums(freqTable[x, ]) * 100
+    rowMeanValue <- rowMeans(freqTable[x, ])
+    positiveDetections <- sum(freqTable[x, ] > 0)
+    positiveDetectionsPerc <- sum(freqTable[x, ] > 0) / nrow(freqTable) * 100
+    cat(x, 'value in NEG:', negValue, '% of ZOTU reads:', negValuePerc, 'mean # reads in sample:', rowMeanValue, '# +ve detections:', positiveDetections, '% +ve detections:', positiveDetectionsPerc, '\n')
+  }
+}
+
+# 1. set detections of 3 or lower to 0
+freqTable.negFilter <- as.data.frame(apply(freqTable, 2, function(x) ifelse(x < 4, 0, x)))
+
+# 1. set abundance threshold 30 for ZOTU2, 2. set abundance threshold 10 for ZOTU8
+freqTable.negFilter['Zotu2', -1] <- ifelse(freqTable.negFilter['Zotu2', -1] >= 30, freqTable.negFilter['Zotu2', -1], 0)
+freqTable.negFilter['Zotu8', -1] <- ifelse(freqTable.negFilter['Zotu8', -1] >= 10, freqTable.negFilter['Zotu8', -1], 0)
+```
+
+### 5.3 Low confidence tax IDs
+
+After filtering the data based on negative control samples, remove low-confidence taxonomy assignments from the data. Low-confidence taxonomy assignments are defined as sequences for which IDTAXA could not provide a taxonomic ID at the order or higher level. Additionally, remove temperate fish species from the data.
+
+```{code-block} R
+#########################
+# LOW CONFIDENCE TAX ID #
+#########################
+
+# 1. find ZOTUs which do not have a taxonomic ID at order level, 2. remove this list from the frequency table
+lowConfidenceTax <- rownames(taxonomyTable)[which(is.na(taxonomyTable$order))]
+freqTable.lowConfidenceTax <- freqTable.negFilter[!(rownames(freqTable.negFilter) %in% lowConfidenceTax), ]
+
+# 1. create ZOTU list that matched to temperate fish species, 2. remove this list from the frequency table
+temperateZOTUs <- c('Zotu56', 'Zotu71', 'Zotu88')
+freqTable.temperateFish <- freqTable.lowConfidenceTax[!(rownames(freqTable.lowConfidenceTax) %in% temperateZOTUs), ]
+```
+
+### 5.4 Artefact sequences
+
+Remove artefact sequences using a taxon-dependent co-occurrence pattern of similar sequences.
+
+```{code-block} R
+##################
+# ARTEFACT ZOTUS #
+##################
+
+# 1. create ZOTU list for additional removal, 2. remove this list from the frequency table
+removeExtraZOTUs <- c('Zotu62', 'Zotu152')
+freqTable.artefact <- freqTable.temperateFish[!(rownames(freqTable.temperateFish) %in% removeExtraZOTUs), ]
+
+# 1. merge daughters with parent ZOTUs, as identified by visual inspection of the frequency table, 2. remove daughter ZOTUs
+# ZOTU32 is parent of ZOTU41, ZOTU45, and ZOTU49, all belonging to the genus bathylagus
+freqTable.artefact['Zotu32', ] <- freqTable.artefact['Zotu32', ] + freqTable.artefact['Zotu41', ] + freqTable.artefact['Zotu45', ] + freqTable.artefact['Zotu49', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu41'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu45'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu49'), ]
+
+# ZOTU15 is parent of ZOTU17, ZOTU93, and ZOTU146, all belonging to Notolepis coatsorum
+freqTable.artefact['Zotu15', ] <- freqTable.artefact['Zotu15', ] + freqTable.artefact['Zotu17', ] + freqTable.artefact['Zotu93', ] + freqTable.artefact['Zotu146', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu17'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu93'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu146'), ]
+
+# ZOTU2 is parent of ZOTU61, ZOTU72, ZOTU86, ZOTU100, ZOTU104, ZOTU127, ZOT133, and ZOTU142, all belonging to the genus Macrourus
+freqTable.artefact['Zotu2', ] <- freqTable.artefact['Zotu2', ] + freqTable.artefact['Zotu61', ] + freqTable.artefact['Zotu72', ] + freqTable.artefact['Zotu86', ] + freqTable.artefact['Zotu100', ] + freqTable.artefact['Zotu104', ] + freqTable.artefact['Zotu127', ] + freqTable.artefact['Zotu133', ] + freqTable.artefact['Zotu142', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu61'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu72'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu86'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu100'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu104'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu127'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu133'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu142'), ]
+
+# ZOTU59 is the parent of ZOTU78, belonging to Antimora rostrata
+freqTable.artefact['Zotu59', ] <- freqTable.artefact['Zotu59', ] + freqTable.artefact['Zotu78', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu78'), ]
+
+# ZOTU128 is the parent of ZOTU149, belonging to Gymnoscopelus braueri
+freqTable.artefact['Zotu128', ] <- freqTable.artefact['Zotu128', ] + freqTable.artefact['Zotu149', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu149'), ]
+
+# ZOTU35 is the parent of ZOTU80, belonging to the genus Bathydraco
+freqTable.artefact['Zotu35', ] <- freqTable.artefact['Zotu35', ] + freqTable.artefact['Zotu80', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu80'), ]
+
+# ZOTU58 is the parent of ZOTU64 and ZOTU65, belonging to Gerlachea australis
+freqTable.artefact['Zotu58', ] <- freqTable.artefact['Zotu58', ] + freqTable.artefact['Zotu64', ] + freqTable.artefact['Zotu65', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu64'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu65'), ]
+
+# ZOTU40 is the parent of ZOTU43, belonging to Psilodraco breviceps
+freqTable.artefact['Zotu40', ] <- freqTable.artefact['Zotu40', ] + freqTable.artefact['Zotu43', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu43'), ]
+
+# ZOTU95 is the parent of ZOTU124 and ZOTU151, belonging to the genus Chionobathyscus
+freqTable.artefact['Zotu95', ] <- freqTable.artefact['Zotu95', ] + freqTable.artefact['Zotu124', ] + freqTable.artefact['Zotu151', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu124'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu151'), ]
+
+# ZOTU19 is the parent of ZOTU34, belonging to Chionobathyscus dewitti
+freqTable.artefact['Zotu19', ] <- freqTable.artefact['Zotu19', ] + freqTable.artefact['Zotu34', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu34'), ]
+
+# ZOTU16 is parent of ZOTU25, ZOTU120, ZOTU131, and ZOTU135, all belonging to the genus Chionodraco
+freqTable.artefact['Zotu16', ] <- freqTable.artefact['Zotu16', ] + freqTable.artefact['Zotu25', ] + freqTable.artefact['Zotu120', ] + freqTable.artefact['Zotu131', ] + freqTable.artefact['Zotu135', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu25'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu120'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu131'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu135'), ]
+
+# ZOTU20 is parent of ZOTU39, ZOTU129, and ZOTU130, all belonging to the genus Chionodraco
+freqTable.artefact['Zotu20', ] <- freqTable.artefact['Zotu20', ] + freqTable.artefact['Zotu39', ] + freqTable.artefact['Zotu129', ] + freqTable.artefact['Zotu130', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu39'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu129'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu130'), ]
+
+# ZOTU13 is the parent of ZOTU22, belonging to Pagetopsis maculatus
+freqTable.artefact['Zotu13', ] <- freqTable.artefact['Zotu13', ] + freqTable.artefact['Zotu22', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu22'), ]
+
+# ZOTU26 is the parent of ZOTU85, belonging to the genus Paraliparis
+freqTable.artefact['Zotu26', ] <- freqTable.artefact['Zotu26', ] + freqTable.artefact['Zotu85', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu85'), ]
+
+# ZOTU1 is the parent of ZOTU109, ZOTU110, ZOTU136, ZOTU138, ZOTU140, and ZOTU144, all belonging to Dissostichus mawsoni
+freqTable.artefact['Zotu1', ] <- freqTable.artefact['Zotu1', ] + freqTable.artefact['Zotu109', ] + freqTable.artefact['Zotu110', ] + freqTable.artefact['Zotu136', ] + freqTable.artefact['Zotu138', ] + freqTable.artefact['Zotu140', ] + freqTable.artefact['Zotu144', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu109'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu110'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu136'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu138'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu140'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu144'), ]
+
+# ZOTU3 is the parent of ZOTU8 and ZOTU103, belonging to Pleuragramma antarctica
+freqTable.artefact['Zotu3', ] <- freqTable.artefact['Zotu3', ] + freqTable.artefact['Zotu8', ] + freqTable.artefact['Zotu103', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu8'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu103'), ]
+
+# ZOTU73 is the parent of ZOTU97 and ZOTU125, belonging to the genus Pagrus
+freqTable.artefact['Zotu73', ] <- freqTable.artefact['Zotu73', ] + freqTable.artefact['Zotu97', ] + freqTable.artefact['Zotu125', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu97'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu125'), ]
+
+# ZOTU44 is the parent of ZOTU52, ZOTU63, ZOTU89, and ZOTU92, all belonging to Cyclothone pygmaea
+freqTable.artefact['Zotu44', ] <- freqTable.artefact['Zotu44', ] + freqTable.artefact['Zotu52', ] + freqTable.artefact['Zotu63', ] + freqTable.artefact['Zotu89', ] + freqTable.artefact['Zotu92', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu52'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu63'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu89'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu92'), ]
+
+# ZOTU37 is the parent of ZOTU46 and ZOTU54, belonging to the genus Hoplostethus
+freqTable.artefact['Zotu37', ] <- freqTable.artefact['Zotu37', ] + freqTable.artefact['Zotu46', ] + freqTable.artefact['Zotu54', ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu46'), ]
+freqTable.artefact <- freqTable.artefact[-which(rownames(freqTable.artefact) == 'Zotu54'), ]
+```
+
+### 5.5 Sample read count
+
+The final filtering step of the data is to remove low-abundant samples from the analysis. For this experiment, the threshold is set at 10,000 reads. Since most samples from *Cinachyra* sponges failed to amplify and contain more than 10,000 reads, remove all samples from *Cinachyra* sponges.
+
+```{code-block} R
+#####################
+# SAMPLE READ COUNT #
+#####################
+
+# 1. list all samples with reads lower than threshold, 2. iterate over list and print metadata for samples, as well as read count, 3. drop columns from rawTable, 4. drop rows from metaData
+lowCoverageSamples <- names(which(colSums(freqTable.artefact) < 10000))
+for (x in lowCoverageSamples) {
+  if (x %in% metaData$sampleID) {
+    row <- paste(metaData[metaData$sampleID == x, ], collapse = ' ')
+    seqCount <- sum(freqTable.artefact$x)
+    cat(row, seqCount, '/n')
+  } else {
+    seqCount <- sum(freqTable.artefact$x)
+    cat('sampleID', x, 'not found in metaData, seqCount = ', seqCount, '\n')
+  }
+}
+
+# 1. list samples to remove based on abundance threshold and sponge species, 2. remove samples from the frequency table.
+cinachyraSamples<- metaData %>%
+  filter(spongeID == 'Cinachyra barbata') %>%
+  pull(sampleID)
+samplesToRemove <- unique(c(cinachyraSamples, lowCoverageSamples))
+freqTable.sampleThreshold <- freqTable.artefact[, !(names(freqTable.artefact) %in% samplesToRemove)]
+
+# 1. check if any ZOTUs have a total count of 0, 2. remove these ZOTUs from the frequency table
+removeZOTU <- names(which(rowSums(freqTable.sampleThreshold) == 0))
+removeZOTU
+```
+
+### 5.6 Export data tables
+
+Once the data is filtered, export and write the updated tables to new files.
+
+```{code-block} R
+#################
+# UPDATE TABLES #
+#################
+
+# 1. update metaData based on headers in freqTable.sampleThreshold
+metaData.sampleThreshold <- metaData[(metaData$sampleID) %in% rownames(t(freqTable.sampleThreshold)), ]
+
+# 1. update taxonomyTable based on rownames freqTable.sampleThreshold
+taxonomyTable.sampleThreshold <- taxonomyTable[(rownames(taxonomyTable) %in% rownames(freqTable.sampleThreshold)), ]
+
+# 1. update sequenceTable based on rownames taxonomyTable.sampleThreshold
+sequenceTable.sampleThreshold <- sequenceTable[rownames(taxonomyTable.sampleThreshold)]
+
+# 1. write freqTable.sampleThreshold to output, 2. write metaData.sampleThreshold to output, 3. write taxonomyTable.sampleThreshold to output, 4. write sequenceTable.sampleThreshold to output
+write.table(freqTable.sampleThreshold, 'zotutableFiltered.txt', append = FALSE, sep = '\t', dec = '.', row.names = TRUE, col.names = NA)
+write.table(metaData.sampleThreshold, '../../../sampleMetadata8373Filtered.txt', append = FALSE, sep = '\t', dec = '.', row.names = FALSE)
+write.table(taxonomyTable.sampleThreshold, 'taxonomyFiltered.txt', append = FALSE, sep = '\t', dec = '.', row.names = TRUE, col.names = NA)
+writeXStringSet(sequenceTable.sampleThreshold, file = 'asvFiltered.fasta')
+```
