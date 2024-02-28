@@ -106,6 +106,7 @@ vsearch --derep_fulllength combined.fasta --relabel uniq. --output derep/uniques
 Using the unique sequences, denoise the remaining reads to find all biologically relevant sequences using [USEARCH](https://www.drive5.com/usearch/). USEARCH will automatically remove chimeric sequences during this step.
 
 ```{code-block} bash
+cd derep/
 usearch -unoise3 uniques.fasta -zotus asv.fasta
 ```
 
@@ -116,3 +117,82 @@ Once a list of ASV's is generated, match this list to the sequence data to creat
 ```{code-block} bash
 usearch -otutab combined.fasta -zotus asv.fasta -otutabout zotutable.txt
 ```
+
+## 4. Taxonomy assignment
+
+[IDTAXA](http://www2.decipher.codes/Classification.html) was used as the taxonomic classifier in this project. First, a local reference database was generated using [CRABS](https://github.com/gjeunen/reference_database_creator).
+
+### 4.1 CRABS - local reference database
+
+#### 4.1.1 db_download
+
+First, download sequencing data from online repositories, including the mitofish database and NCBI.
+
+```{code-block} bash
+crabs db_download -s mitofish -o mitofish.fasta
+crabs db_download -s ncbi -db nucleotide -q '16S[All Fields] AND (animals[filter] AND mitochondrion[filter])' -o ncbi16S.fasta -e gjeunen@gmail.com
+```
+
+Additionally, the NCBI taxonomy information needs to be downloaded to complete the reference database creation with CRABS.
+
+```{code-block} bash
+crabs db_download -s taxonomy
+```
+
+#### 4.1.2 db_merge
+
+Second, merge the sequencing data from both online repositories that were downloaded previously.
+
+```{code-block} bash
+crabs db_merge -o merged.fasta -u yes -i ncbi16S.fasta mitofish.fasta
+```
+
+#### 4.1.3 insilico_pcr
+
+Third, extract amplicons from reference sequences using an *in silico* PCR analysis.
+
+```{code-block} bash
+crabs insilico_pcr -i merged.fasta -o insilico.fasta -f GACCCTATGGAGCTTTAGAC -r CGCTGTTATCCCTADRGTAACT
+```
+
+#### 4.1.4 pga
+
+Fourth, recover reference sequences without primer-binding regions through a pairwise global alignment analysis.
+
+```{code-block} bash
+crabs pga -i merged.fasta -o pga.fasta -db insilico.fasta -f GACCCTATGGAGCTTTAGAC -r CGCTGTTATCCCTADRGTAACT
+```
+
+#### 4.1.5 assign_tax
+
+Fifth, assign a taxonomic lineage to each sequence.
+
+```{code-block} bash
+crabs assign_tax -i pga.fasta -o taxdb.tsv -a nucl_gb.accession2taxid -t nodes.dmp -n names.dmp -w yes
+```
+
+#### 4.1.6 dereplicate
+
+Sixth, to reduce file size and remove reduntant sequences, dereplicate the data.
+
+```{code-block} bash
+crabs dereplicate -i taxdb.tsv -o derep.tsv -m uniq_species
+```
+
+#### 4.1.7 seq_cleanup
+
+Seventh, prior to exporting the reference database, use various filtering parameters to retain only high quality references in the local database.
+
+```{code-block} bash
+crabs seq_cleanup -i derep.tsv -o cleandb.tsv -e yes -s yes -n 0
+```
+
+#### 4.1.8 tax_format
+
+Eigth, export the database to SINTAX format, as CRABS currently doesn't support the IDTAXA format.
+
+```{code-block} bash
+crabs tax_format -i cleandb.tsv -o sintax.fasta -f sintax
+```
+
+Once the database is exported to SINTAX format, use the python script below to reformat the local reference database to IDTAXA specifications.
