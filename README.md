@@ -56,9 +56,63 @@ cutadapt 8373Combined.fastq -a ATCTCGTATGCCGTCTTCTGCTTG -o 8373Combinedp7removed
 
 #### 3.2.2 Assigning reads
 
-Once Illumina adapters are removed, demultiplex data the data using [cutadapt](https://cutadapt.readthedocs.io/en/stable/). Note that in the metadata file, information starts with `^` and ends with `$`, indicating the anchoring of barcode sequences. Additionally, since primer regions need to be removed as well, the metadata file specifies the barcode + primer region as the adapter to be removed. Since multiple files will be generated during demultiplexing, one per sample, place newly generated files in a new folder using the code below.
+Once Illumina adapters are removed, demultiplex data the data using [cutadapt](https://cutadapt.readthedocs.io/en/stable/). Note that in the metadata file, information starts with `^` and ends with `$`, indicating the anchoring of barcode sequences. Additionally, since primer regions need to be removed as well, the metadata file specifies the barcode + primer region as the adapter to be removed. Since multiple files will be generated during demultiplexing, one per sample, place newly generated files in a new folder using the code below. Roughly 65% of reads sshould pass this filtering step. Low number of demultiplexed reads is due to the library of these samples being pooled with other libraries in a single sequencing run.
 
 ```{code-block} bash
 mkdir demux
 cutadapt 8373Combinedp7removed.fastq -g file:'barcodeMetadata8373.fasta' -o demux/{name}.fastq --discard-untrimmed --no-indels -e 2 --cores=0
+```
+
+### 3.3 Quality filtering
+
+Once reads have been demultiplexed, filter reads based on various quality parameters using [VSEARCH](https://github.com/torognes/vsearch). To combine all files post quality filtering, rename sequence headers to sample names.
+
+```{code-block} bash
+cd demux/
+mkdir qual_fasta qual_fastq
+for fq in *.fastq
+do
+echo "\n\n\nAnalysing: ${fq}"
+fasta=${fq/.fastq/.fasta}
+vsearch --fastq_filter ${fq} --fastq_maxee 1.0 --fastq_minlen 190 --fastq_maxlen 220 --fastq_maxns 0 --fastqout qual_fastq/${fq} --fastaout qual_fasta/${fasta} --relabel ${fq/.fastq/}.
+done
+```
+
+Once quality filtering is completed, combine all files into a single sequence file using the `cat` command.
+
+```{code-block} bash
+cat qual_fastq/*.fastq > qual_fastq/combined.fastq
+cat qual_fasta/*.fasta > qual_fasta/combined.fasta
+```
+
+Prior to dereplication, check quality of "**combined.fastq**" using [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) to verify quality filtering was successful.
+
+```{code-block} bash
+fastqc qual_fastq/combined.fastq -t 8 
+```
+
+### 3.4 Dereplication
+
+Next, dereplicate the data using [VSEARCH](https://github.com/torognes/vsearch), i.e., find unique sequences in the "**combined.fasta**" file.
+
+```{code-block} bash
+cd qual_fasta
+mkdir derep
+vsearch --derep_fulllength combined.fasta --relabel uniq. --output derep/uniques.fasta --sizeout
+```
+
+### 3.5 Denoising
+
+Using the unique sequences, denoise the remaining reads to find all biologically relevant sequences using [USEARCH](https://www.drive5.com/usearch/). USEARCH will automatically remove chimeric sequences during this step.
+
+```{code-block} bash
+usearch -unoise3 uniques.fasta -zotus asv.fasta
+```
+
+### 3.6 Count table
+
+Once a list of ASV's is generated, match this list to the sequence data to create a count table through a global alignment search using [USEARCH](https://www.drive5.com/usearch/).
+
+```{code-block} bash
+usearch -otutab combined.fasta -zotus asv.fasta -otutabout zotutable.txt
 ```
