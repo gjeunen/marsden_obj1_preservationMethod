@@ -776,6 +776,8 @@ metadata <- read_xlsx('../../../Porifera_NIWA_22Sept2023.xlsx', sheet = 'Porifer
 
 ### 6.2 Figure 1
 
+Figure 1 of the manuscript provides information on the number of sponge specimens in the NIWA Invertebrate Collection (NIC) per decade and facetted by preservation method, including dry, ethanol, frozen, formalin, isopropanol, and other. Specimens included in ‘other’ include preservation methods listed as Alcohol Unknown, Ethanol – Previously Unknown, and Slide. Number above bars represent number of specimens. Y-axis reported as square root transformed to increase readability of low-abundant collection numbers. For NIC specimen data, see [Porifera_NIWA_22Sept2023.xlsx](https://nzobisipt.niwa.co.nz/resource?r=obisspecify).
+
 ```{code-block} R
 #######################################
 # FIGURE 1: PRESERVATION OF SPECIMENS #
@@ -846,4 +848,66 @@ ggplot(bin_counts, aes(x = `Year Bin`, y = count, fill = `Pres Type`)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_y_sqrt(expand = c(0, 0), limits = c(0, 6000)) +
   facet_wrap(~ factor(`Pres Type`, levels = facet_order), scales = "free_x")
+```
+
+### 6.3 Figure 2
+
+Figure 2 of the manuscript displays the map of the Ross Sea, Antarctica and depicts specimen collection locations. Points are coloured by preservation method, including dry (yellow), ethanol (blue), and frozen (red). Point shape is dictated by sponge ID, including Cinachyra sp. (inverted triangle), Homaxinella sp. (circle), Inflatella belli (square), Rossella nuda (diamond), and Rossella villosa (triangle).
+
+```{code-block} R
+#read in data
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(terra, tidyterra, ggplot2, ggnewscale, patchwork)
+ATAshp <- simplifyGeom(vect("Coastline_high_res_polygon/Coastline_high_res_polygon.shp"), tolerance=500)
+ATAshp$col <- sapply(ATAshp$surface, function(x){ifelse(x == "land", "grey85", "grey98")})
+sponge_dat <- read.csv("../../../sampleMetadata8373.csv")
+sponge_unique <- sponge_dat[!duplicated(sponge_dat$sampleSet), ]
+sponge_unique <- sponge_unique[!is.na(sponge_unique$preservationType), ]
+sponge_unique <- sponge_unique[sponge_unique$spongeID != "Cinachyra barbata", ]
+sponge_pts <- project(vect(sponge_unique, geom = c("longitude", "latitude"), keepgeom = TRUE, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"), ATAshp)
+grat <- project(vect(sf::st_graticule(lon=seq(-175, 180, 5), lat = seq(-85, -60, 5), ndiscr = 5000)), ATAshp)
+ibsco <- rast("IBCSO_v2_ice-surface.nc")
+sample_colors <- c("dry" = "lightgoldenrod", "ethanol" = "steelblue", "frozen" = "firebrick")
+spp_names <- c(expression(italic("Homaxinella")), expression(italic("Inflatella belli")), expression(italic("Rossella nuda")), expression(italic("Rossella villosa")))
+
+#define xy limits in m (projected coordinate space) for plot
+xmn <- -1000000
+xmx <- 1500000
+ymn <- -2500000
+ymx <- -1000000
+
+#plot Ross Sea region
+RSR_plot <- ggplot() +
+ geom_spatraster(data = ibsco, show.legend = FALSE) +
+ geom_spatvector(data = ATAshp, alpha = 1, fill = ATAshp$col, col = "grey20") +
+ scale_fill_gradient(low = "#528B8B", high = "#CBDCDC") +
+ geom_spatvector(data = grat, col = "grey50", alpha = 0.5) +
+ new_scale_fill() +
+ geom_spatvector(data = sponge_pts, aes(shape = spongeID, fill = preservationType), size = 3, stroke = 0.5) +
+ scale_fill_manual(values = sample_colors, labels = c("Dry", "Ethanol", "Frozen") , name = "Preservation type") +
+ guides(fill = guide_legend(override.aes = list(pch=21))) +
+ scale_shape_manual(values = c(21, 22, 23, 24, 1), labels = spp_names, name = "Species") +
+ scale_x_continuous(breaks = seq(-180, 180, by = 10)) +
+ theme(panel.background = element_blank(), panel.border = element_blank(), legend.position = c(0.12, 0.37), legend.text = element_text(hjust = 0), plot.margin = unit(c(45, 5, 5, 5), "pt")) +
+ coord_sf(crs = crs(ATAshp), expand = FALSE, xlim = c(xmn, xmx), ylim = c(ymn, ymx)) +
+ annotate(geom = "rect", xmin = xmn, xmax = xmx, ymin = ymn, ymax = ymx, fill = NA, col = "grey10")
+
+#plot inset map Antarctica
+inset_map <- ggplot() +
+ geom_rect(aes(xmin = xmn, xmax = xmx, ymin = ymn, ymax = ymx), fill = "white", col = NA, alpha = 1) +
+ geom_spatvector(data = ATAshp, alpha = 1, fill = ATAshp$col, col = "black") +
+ geom_rect(aes(xmin = xmn, xmax = xmx, ymin = ymn, ymax = ymx), fill = "dark red", col = "black", alpha = 0.2) +
+ theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), panel.background = element_blank(), plot.background = element_blank(), panel.border = element_blank(), axis.line = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), axis.title.x = element_blank(), axis.title.y = element_blank(), plot.title = element_blank())
+ 
+#output to pdf
+pdf("RSR_spongemap_v1.pdf", width = 8, height = 5.5)
+RSR_plot + annotation_custom(ggplotGrob(inset_map), xmin = xmx - (xmx-xmn)/3, xmax = xmx, ymin = ymx - (ymx-ymn)/3, ymax = ymx + 280000)
+dev.off()
+```
+
+### 6.4 Figure 3
+
+Figure 3 of the manuscript displays a bayesian phylogenetic tree generated of all 64 ZOTU sequences. Bayesian tree generated in Beast2. Tip labels represent ZOTU number. Taxonomic ID for each ZOTU can be retrieved from SUPPLEMENT 4. Inner bar graph showing the number of detections of each ZOTU sequence within the nine specimens stored dry (yellow), in ethanol (blue), and frozen (red). Outer bar graph showing the relative read abundance of each ZOTU sequence within the nine specimens stored dry (yellow), in ethanol (blue), and frozen (red). Axis for relative read abundance bar graph is reported as square root transformed to increase readability of low-abundant signals. Most frequently and abundant taxonomic groups are represented by silhouettes, including (a) Chondrichthyes, (b) Gadiformes, (c) Bathylagidae, (d) Nototheniidae, (e) Bathydraconidae, and (f) Channichthyidae.
+
+```{code-block} R
 ```
