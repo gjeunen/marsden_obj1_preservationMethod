@@ -1244,3 +1244,66 @@ leveneTest(nt ~ group, data = anovaEstimateDoutlier)
 bartlett.test(nt ~ group, data = anovaEstimateDoutlier)
 (LSD.test(modelEstimateDoutlier, 'group', alpha = 0.05, p.adj = 'non'))
 ```
+
+### 6.11 Figure 5
+
+NMDS ordination plot, as well as PERMANOVA to investigate beta diversity.
+
+```{code-block} R
+##############
+# ORDINATION #
+##############
+# 1. generate frequency-occurrence data frame
+physeq.pa <- microbiome::transform(physeq, 'pa')
+physeq.freqoccur <- merge_samples2(physeq.pa, 'sampleSet')
+print(physeq.freqoccur)
+
+# 1. run NMDS
+freqoccur.nmds <- ordinate(physeq = physeq.freqoccur, method = 'NMDS', distance = 'bray')
+sample_colors <- c("dry" = "lightgoldenrod", "ethanol" = "steelblue", "frozen" = "firebrick")
+plot_ordination(physeq = physeq.freqoccur, ordination = freqoccur.nmds) + 
+  geom_point(aes(fill = preservationType, shape = spongeID), size = 5) +
+  coord_equal() +
+  scale_shape_manual(values = c(21, 22, 23, 24)) +
+  scale_fill_manual(values = sample_colors) + 
+  scale_color_manual(values = sample_colors) +
+  theme_classic() +
+  theme(                             
+    legend.text = element_text(size = 20),                               #changes legend size
+    legend.title = element_blank(),                                      #removes legend title
+    legend.background = element_rect(fill = "white", color = "black"))+  #adds black boarder around legend
+  theme(axis.text.y.left = element_text(size = 20),
+        axis.text.x = element_text(size = 20),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))+
+  guides(fill = guide_legend(override.aes = list(shape = 21))) 
+freqoccur.nmds$stress
+goodness(freqoccur.nmds)
+stressplot(freqoccur.nmds)
+
+#############
+# PERMANOVA #
+#############
+# 1. extract frequency table and metadata from phyloseq object
+permanova.metadata <- as(sample_data(physeq.freqoccur), 'data.frame')
+permanova.freqtable <- as.data.frame(as(otu_table(physeq.freqoccur), 'matrix'))
+
+# 1. create distance matrix
+permanova.dist <- vegdist(t(permanova.freqtable), method = 'bray')
+set.seed(123)
+permanova.results <- adonis2(permanova.dist ~ preservationType + samplingMethod + spongeID, data = permanova.metadata, permutations = 10000, by = 'margin')
+permanova.results
+
+##############
+# BETADISPER #
+##############
+mod <- betadisper(permanova.dist, permanova.metadata$preservationType)
+mod
+boxplot(mod)
+permutest(mod)
+plot(mod, hull = FALSE, ellipse = TRUE)
+anova(mod)
+(mod.HSD <- TukeyHSD(mod))
+plot(mod.HSD)
+permutest(mod, pairwise = TRUE)
+```
