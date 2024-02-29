@@ -1008,7 +1008,7 @@ p + ggtitle(title) + facet_wrap(~type, 1, scales = "free")
 p + ggtitle(title) + scale_y_log10() + facet_wrap(~type, 1, scales = "free")
 ```
 
-### 6.6 Supplement 6
+### 6.6 Supplement 5
 
 Prior to plotting the rarefaction curves, determine if there is a significant correlation between sequencing depth and number of detected taxa using a Pearson correlation test.
 
@@ -1060,4 +1060,45 @@ ps3 <- amp_load(asvTable.ampvis, metadata.ampvis)
 rarPlot <- amp_rarecurve(ps3, stepsize = 100, facet_by = 'sampleSet', color_by = 'preservationType') +
   ylab('Number of observed ZOTUs')
 rarPlot
+```
+
+### 6.7 Supplement 6
+
+Due to the multiple biopsies per sponge, transforming the count table to presence-absence data enables the dataset to be secondarily transformed to an incidence frequency table when merging data from different biopsies per sponge, resulting in a semi-quantitative dataset whereby values range from 0 (ZOTU not detected within a single biopsy) to 5 (ZOTU detected in all biopsies). Through inter- and extrapolation calculations using the iNEXT.3D R package, species accumulation curves can be drawn (SUPPLEMENTAL FIGURE 3). The plateauing of species accumulation curves revealed five biopsies to be sufficient to recover most of the fish diversity held within a sponge.
+
+```{code-block} R
+############
+# iNEXT.3D #
+############
+categories <- unique(sample_data(physeq)$sampleSet)
+split_physeq_list <- list()
+for (category in categories) {
+  sub_physeq <- subset_samples(microbiome::transform(physeq, 'pa'), sampleSet == category)
+  split_physeq_list[[category]] <- otu_table(sub_physeq)
+}  
+
+matrix_list <- lapply(split_physeq_list, function(x) {
+  otu_table <- as(x, "matrix")
+  return(otu_table)
+})
+
+# Create a list named "data" to store matrices
+matrix_list <- list(data = list())
+
+# Convert each split phyloseq object into a matrix and store it under "data"
+for (category in categories) {
+  otu_table <- as(otu_table(split_physeq_list[[category]]), "matrix")
+  matrix_list[["data"]][[category]] <- otu_table
+}
+
+out.raw <- iNEXT3D(data = matrix_list$data, diversity = 'TD', q = c(0, 1, 2), datatype = 'incidence_raw', nboot = 50)
+ggiNEXT3D(out.raw, type = 1, facet.var = 'Assemblage') + facet_wrap(~Assemblage, nrow = 3)
+#ggiNEXT3D(out.raw, type = 2, facet.var = "Assemblage", color.var = "Order.q") # error due to more than 8 groups
+ggiNEXT3D(out.raw, type = 3, facet.var = 'Assemblage') + facet_wrap(~Assemblage, nrow = 3)
+
+DataInfo3D(matrix_list$data, diversity = 'TD', datatype = 'incidence_raw')
+out1 <- AO3D(matrix_list$data, diversity = 'TD', datatype = 'incidence_raw', method = 'Observed', nboot = 50, conf = 0.95)
+out2 <- estimate3D(matrix_list$data, diversity = 'TD', q = 0, datatype = 'incidence_raw', base = 'coverage', level = 0.9)
+out2
+ggAO3D(out1, profile = 'q')
 ```
