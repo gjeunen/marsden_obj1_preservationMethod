@@ -1102,3 +1102,145 @@ out2 <- estimate3D(matrix_list$data, diversity = 'TD', q = 0, datatype = 'incide
 out2
 ggAO3D(out1, profile = 'q')
 ```
+
+### 6.8 Figure 4a
+
+Figure 4 of the manuscript displays (a) boxplots depicting the estimated tissue biopsies needed to recover 90% of the fish diversity between the three preservation methods, including dry (yellow), ethanol (blue), and frozen (red). The median is indicated by a black line within each boxplot. Samples are indicated by coloured dots, including circle (dry), triangle (ethanol), and square (frozen). The outlier specimen PMD1 (four out of DNA extracts yielded fish eDNA signals) was removed from the analysis. One-way ANOVA results are presented above the figure. Significant differences between preservation methods, as reported by Fisher’s LSD, are indicated by lower-case letters. (b) Boxplots depicting alpha diversity measurements between the three preservation methods for three orders of Hill numbers, including q = 0 (species richness), q = 1 (exponential of Shannon entropy), and q = 2 (inverse of Simpson concentration). Non-significant one-way ANOVA results are presented above the figure. Colour and shape follows Figure 4a.
+
+```{code-block} R
+################
+# HILL NUMBERS #
+################
+# 1. add a new column to the out1 data frame containing group info
+out1$group <- substr(out1$Assemblage, 1, 3)
+qOrders <- c(0.0, 1.0, 2.0)
+out1 <- out1[out1$Order.q %in% qOrders, ]
+
+# 1. draw boxplot
+ggplot(out1, aes(x = as.character(Order.q), y = qD, fill = group, alpha = 0.5, test = interaction(group, as.character(Order.q))))+
+  geom_boxplot(outlier.size = 0) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.1), aes(shape = group, color = group), size = 3) +
+  scale_fill_manual(values = c("lightgoldenrod", "steelblue", "firebrick")) +
+  scale_color_manual(values = c("lightgoldenrod", "steelblue", "firebrick")) +
+  theme_bw()
+
+# 1. subset out1 to only keep q0, q1, and q2 for each sample
+q0 <- out1[out1$Order.q %in% 0.0, ]
+q1 <- out1[out1$Order.q %in% 1.0, ]
+q2 <- out1[out1$Order.q %in% 2.0, ]
+
+# 1. run ANOVA for q0
+anovaHill0 <- mutate(q0, group = factor(group, levels = unique(group)))
+Summarize(qD ~ group, data = q0, digits = 3)
+modelq0 <- lm(qD ~ group, data = q0)
+Anova(modelq0, type = 'II')
+anova(modelq0)
+summary(modelq0)
+
+# 1. check assumptions for ANOVA q0
+hist(residuals(modelq0), col = 'darkgray')
+shapiro.test(residuals(modelq0))
+plot(fitted(modelq0), residuals(modelq0))
+leveneTest(qD ~ group, data = anovaHill0)
+bartlett.test(qD ~ group, data = anovaHill0)
+
+# 1. run ANOVA for q1
+anovaHill1 <- mutate(q1, group = factor(group, levels = unique(group)))
+Summarize(qD ~ group, data = q1, digits = 3)
+modelq1 <- lm(qD ~ group, data = q1)
+Anova(modelq1, type = 'II')
+anova(modelq1)
+summary(modelq1)
+
+# 1. check assumptions for ANOVA q1
+hist(residuals(modelq1), col = 'darkgray')
+shapiro.test(residuals(modelq1))
+plot(fitted(modelq1), residuals(modelq1))
+leveneTest(qD ~ group, data = anovaHill1)
+bartlett.test(qD ~ group, data = anovaHill1)
+
+# 1. run ANOVA for q2
+anovaHill0 <- mutate(q2, group = factor(group, levels = unique(group)))
+Summarize(qD ~ group, data = q2, digits = 3)
+modelq2 <- lm(qD ~ group, data = q2)
+Anova(modelq2, type = 'II')
+anova(modelq2)
+summary(modelq2)
+
+# 1. check assumptions for ANOVA q2
+hist(residuals(modelq2), col = 'darkgray')
+shapiro.test(residuals(modelq2))
+plot(fitted(modelq2), residuals(modelq2))
+leveneTest(qD ~ group, data = anovaHill2)
+bartlett.test(qD ~ group, data = anovaHill2)
+```
+
+### 6.9 Supplement 7
+
+To estimate the replication, i.e., number of biopsies per sponge, required, use the `estimate3D` function within the iNEXT.3D R package. The data, however, contains a single outlier. The code below can be used to plot the results and run the statistical tests on the data without the outlier removed from the analysis.
+
+```{code-block} R
+########################
+# ESTIMATE REPLICATION #
+########################
+# 1. add a new column to the out2 data frame containing group info
+out2$group <- substr(out2$Assemblage, 1, 3)
+
+# 1. draw boxplot
+ggplot(out2, aes(x = group, y = nt, fill = group, alpha = 0.5)) +
+  geom_boxplot(outlier.size = 0, width = 0.2) +
+  geom_jitter(aes(shape = group, color = group), size = 3, width = 0.1) +
+  scale_fill_manual(values = c("lightgoldenrod", "steelblue", "firebrick")) +
+  scale_color_manual(values = c("lightgoldenrod", "steelblue", "firebrick")) +
+  scale_y_continuous(limits = c(0, 18)) +
+  theme_bw()
+
+# 1. run ANOVA for estimateD
+anovaEstimateD <- mutate(out2, group = factor(group, levels = unique(group)))
+Summarize(nt ~ group, data = out2, digits = 3)
+modelEstimateD <- lm(nt ~ group, data = out2)
+Anova(modelEstimateD, type = 'II')
+anova(modelEstimateD)
+summary(modelEstimateD)
+
+# 1. check assumptions for ANOVA estimateD
+hist(residuals(modelEstimateD), col = 'darkgray')
+shapiro.test(residuals(modelEstimateD))
+plot(fitted(modelEstimateD), residuals(modelEstimateD))
+leveneTest(nt ~ group, data = anovaEstimateD)
+bartlett.test(nt ~ group, data = anovaEstimateD)
+
+# 1. run non-parametric test (Welch's ANOVA), as the data is not normally distributed
+oneway.test(nt ~ group, data = anovaEstimateD, var.equal = FALSE)
+```
+
+### 6.10 Figure 4b
+
+Rerunning the code of Supplement 7, but with outlier removed from the analysis.
+
+```{code-block} R
+# 1. repeat, but with outlier removed
+out2.outlier <- out2[!out2$Assemblage %in% 'PMD1', ]
+ggplot(out2.outlier, aes(x = group, y = nt, fill = group, alpha = 0.5)) +
+  geom_boxplot(outlier.size = 0, width = 0.2) +
+  geom_jitter(aes(shape = group, color = group), size = 3, width = 0.1) +
+  scale_fill_manual(values = c("lightgoldenrod", "steelblue", "firebrick")) +
+  scale_color_manual(values = c("lightgoldenrod", "steelblue", "firebrick")) +
+  theme_bw()
+
+# 1. run ANOVA for estimateDoutlier
+anovaEstimateDoutlier <- mutate(out2.outlier, group = factor(group, levels = unique(group)))
+Summarize(nt ~ group, data = out2.outlier, digits = 3)
+modelEstimateDoutlier <- lm(nt ~ group, data = out2.outlier)
+Anova(modelEstimateDoutlier, type = 'II')
+anova(modelEstimateDoutlier)
+summary(modelEstimateDoutlier)
+
+# 1. check assumptions for ANOVA estimateDoutlier
+hist(residuals(modelEstimateDoutlier), col = 'darkgray')
+shapiro.test(residuals(modelEstimateDoutlier))
+plot(fitted(modelEstimateDoutlier), residuals(modelEstimateDoutlier))
+leveneTest(nt ~ group, data = anovaEstimateDoutlier)
+bartlett.test(nt ~ group, data = anovaEstimateDoutlier)
+(LSD.test(modelEstimateDoutlier, 'group', alpha = 0.05, p.adj = 'non'))
+```
